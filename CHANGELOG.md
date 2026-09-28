@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-09-28
+
+### Changed
+
+- Regenerated the model catalog from models.dev, adding new OpenCode Go models (GLM 5.2/5.3/5.3 Flash, Kimi K2.6/K2.7/K3, DeepSeek V4, Qwen 3.7/3.8, MiniMax M3, and more)
+- Updated default models for providers whose previous defaults were removed from the catalog
+
 ## [1.0.0] - 2026-03-15
 
 ### Added
