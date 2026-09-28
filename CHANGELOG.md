@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-09-28
+
+### Fixed
+
+- OpenCode / OpenCode Go requests now send a stable per-conversation `x-opencode-session` header and a `sitegeist` user agent, fixing "400 Request is missing x-opencode-session"
+
 ## [1.0.2] - 2026-09-28
 
 ### Fixed

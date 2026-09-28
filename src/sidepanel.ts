@@ -8,6 +8,7 @@ import {
 	type AgentMessage,
 	type AgentState,
 	type AgentTool,
+	type StreamFn,
 } from "@mariozechner/pi-agent-core";
 import { getModel, getModels, type Model } from "@mariozechner/pi-ai";
 import {
@@ -87,6 +88,8 @@ setAppStorage(storage);
 // APP STATE
 // ============================================================================
 let currentSessionId: string | undefined;
+// Becomes currentSessionId once the conversation is saved, so the OpenCode session header stays stable.
+let pendingSessionId = crypto.randomUUID();
 let currentTitle = "";
 let isEditingTitle = false;
 let agent: Agent;
@@ -326,7 +329,26 @@ const updateUrl = (sessionId: string) => {
 	window.history.replaceState({}, "", url);
 };
 
+// OpenCode Zen/Go reject requests without a stable per-conversation x-opencode-session header.
+// See https://opencode.ai/docs/go/#where-can-i-use-it
+const withOpenCodeSessionHeader =
+	(streamFn: StreamFn): StreamFn =>
+	(model, context, options) => {
+		if (model.provider !== "opencode" && model.provider !== "opencode-go" && !model.baseUrl.includes("opencode.ai")) {
+			return streamFn(model, context, options);
+		}
+		return streamFn(model, context, {
+			...options,
+			headers: {
+				"x-opencode-session": currentSessionId ?? pendingSessionId,
+				"x-opencode-client": "sitegeist",
+				...options?.headers,
+			},
+		});
+	};
+
 const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true) => {
+	pendingSessionId = crypto.randomUUID();
 	if (agentUnsubscribe) {
 		agentUnsubscribe();
 	}
@@ -388,11 +410,13 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 		},
 		convertToLlm: browserMessageTransformer,
 		toolExecution: "sequential",
-		streamFn: createStreamFn(async () => {
-			const enabled = await storage.settings.get<boolean>("proxy.enabled");
-			if (!enabled) return undefined;
-			return (await storage.settings.get<string>("proxy.url")) || undefined;
-		}),
+		streamFn: withOpenCodeSessionHeader(
+			createStreamFn(async () => {
+				const enabled = await storage.settings.get<boolean>("proxy.enabled");
+				if (!enabled) return undefined;
+				return (await storage.settings.get<string>("proxy.url")) || undefined;
+			}),
+		),
 		getApiKey: async (provider: string) => {
 			const stored = await storage.providerKeys.get(provider);
 			if (!stored) return undefined;
@@ -433,7 +457,7 @@ const createAgent = async (initialState?: Partial<AgentState>, shouldSave = true
 			}
 
 			if (!currentSessionId && shouldSaveSession(messages)) {
-				currentSessionId = crypto.randomUUID();
+				currentSessionId = pendingSessionId;
 
 				port
 					.sendMessage({
