@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-09-28
+
+### Fixed
+
+- OpenCode and OpenCode Go API keys can now be entered in Settings → API Keys & OAuth
+
 ## [1.0.1] - 2026-09-28
 
 ### Changed
